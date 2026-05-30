@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Heart, Radio, Info, ArrowUp, Loader2 } from 'lucide-react';
+import { Search, Heart, Radio, Settings, ArrowUp, Loader2 } from 'lucide-react';
 import { Station, TabType } from './types';
 import Loader from './components/Loader';
 import StationCard from './components/StationCard';
 import PlayerBar from './components/PlayerBar';
-import AboutTab from './components/AboutTab';
+import SettingsTab from './components/SettingsTab';
 
 const LIMIT = 100;
 const FALLBACK_SERVERS = [
@@ -46,6 +46,76 @@ export default function App() {
   // DOM and Audio References
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
+
+  // Theme & Language states with LocalStorage persistence
+  const [theme, setTheme] = useState<'white' | 'black' | 'system' | 'telegram'>(() => {
+    return (localStorage.getItem('webradio_theme') as any) || 'black';
+  });
+  const [lang, setLang] = useState<'ru' | 'en'>(() => {
+    return (localStorage.getItem('webradio_lang') as any) || 'ru';
+  });
+  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
+
+  // Sync resolved theme reactively
+  useEffect(() => {
+    localStorage.setItem('webradio_theme', theme);
+    if (theme === 'black') {
+      setResolvedTheme('dark');
+      return;
+    }
+    if (theme === 'white') {
+      setResolvedTheme('light');
+      return;
+    }
+    if (theme === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      setResolvedTheme(mq.matches ? 'dark' : 'light');
+      const listener = (e: MediaQueryListEvent) => {
+        setResolvedTheme(e.matches ? 'dark' : 'light');
+      };
+      mq.addEventListener('change', listener);
+      return () => mq.removeEventListener('change', listener);
+    }
+    if (theme === 'telegram') {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        if (tg.colorScheme) {
+          setResolvedTheme(tg.colorScheme === 'dark' ? 'dark' : 'light');
+          return;
+        }
+      }
+      setResolvedTheme('dark');
+    }
+  }, [theme]);
+
+  const handleLangChange = (newLang: 'ru' | 'en') => {
+    setLang(newLang);
+    localStorage.setItem('webradio_lang', newLang);
+  };
+
+  const getLocalizedStatusText = (currentStatus: string, currentLang: 'ru' | 'en') => {
+    if (currentLang === 'en') {
+      switch (currentStatus) {
+        case 'idle': return 'Ready';
+        case 'playing': return 'Playing';
+        case 'paused': return 'Paused';
+        case 'buffering': return 'Buffering...';
+        case 'error': return 'Stream error';
+        case 'waiting': return 'Buffering...';
+        default: return 'Waiting';
+      }
+    } else {
+      switch (currentStatus) {
+        case 'idle': return 'Готово';
+        case 'playing': return 'Играет';
+        case 'paused': return 'Пауза';
+        case 'buffering': return 'Буферизация...';
+        case 'error': return 'Ошибка потока';
+        case 'waiting': return 'Буферизация...';
+        default: return 'Ожидание';
+      }
+    }
+  };
 
   // 1. Initialize Telegram WebApp Hook on Mount
   useEffect(() => {
@@ -394,24 +464,53 @@ export default function App() {
         isVisible={isLoaderVisible}
       />
 
-      <div className="w-full max-w-[500px] h-screen flex flex-col bg-[#121212] relative overflow-hidden shadow-2xl">
+      <div 
+        className={`w-full max-w-[500px] h-screen flex flex-col relative overflow-hidden shadow-2xl transition-colors duration-200 ${resolvedTheme === 'light' ? 'bg-[#f7f8fa] text-[#1c1c1e]' : 'bg-[#121212] text-white'}`}
+        style={theme === 'telegram' ? {
+          backgroundColor: 'var(--tg-theme-bg-color, #121212)',
+          color: 'var(--tg-theme-text-color, #ffffff)',
+        } : {}}
+      >
         {/* App Title Header exactly like .app-header */}
-        <header className="safe-pt safe-pl safe-pr pb-2 bg-[#1e1e1e] border-b border-white/[0.05] text-center shrink-0">
+        <header 
+          className={`safe-pt safe-pl safe-pr pb-2 text-center shrink-0 transition-colors duration-200 ${
+            resolvedTheme === 'light' 
+              ? 'bg-white border-b border-black/[0.05]' 
+              : 'bg-[#1e1e1e] border-b border-white/[0.05]'
+          }`}
+          style={theme === 'telegram' ? {
+            backgroundColor: 'var(--tg-theme-secondary-bg-color, #1e1e1e)',
+          } : {}}
+        >
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block mb-1 tracking-[-0.5px] select-none">
             WebRadioBot
           </h1>
 
           {/* Search bar module mimicking .search-wrapper exactly on Radio page */}
           {activeTab === 'radio' && (
-            <div className="my-[4px] mx-0 bg-[#2c2c2c] rounded-[28px] p-[4px_8px_4px_16px] flex items-center border border-white/[0.08]">
+            <div 
+              className={`my-[4px] mx-0 rounded-[28px] p-[4px_8px_4px_16px] flex items-center border transition-all duration-200 ${
+                resolvedTheme === 'light'
+                  ? 'bg-neutral-100 border-black/[0.06]'
+                  : 'bg-[#2c2c2c] border-white/[0.08]'
+              }`}
+              style={theme === 'telegram' ? {
+                backgroundColor: 'var(--tg-theme-bg-color, #121212)',
+              } : {}}
+            >
               <Search className="w-[18px] h-[18px] text-[#9e9e9e] mr-2 shrink-0" />
               <input
                 type="text"
-                placeholder="Поиск станций..."
+                placeholder={lang === 'ru' ? 'Поиск станций...' : 'Search stations...'}
                 autoComplete="off"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent border-none outline-none text-white text-[16px] py-3 px-0 font-medium placeholder-[#9e9e9e] focus:outline-none"
+                className={`w-full bg-transparent border-none outline-none text-[16px] py-3 px-0 font-medium placeholder-[#9e9e9e] focus:outline-none ${
+                  resolvedTheme === 'light' ? 'text-[#1c1c1e]' : 'text-white'
+                }`}
+                style={theme === 'telegram' ? {
+                  color: 'var(--tg-theme-text-color, #ffffff)',
+                } : {}}
               />
               {isLoading && (
                 <Loader2 className="w-4 h-4 text-[#c2185b] animate-spin shrink-0 mr-1" />
@@ -430,14 +529,18 @@ export default function App() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3 px-1.5 text-xs uppercase tracking-wider font-extrabold text-neutral-400 select-none">
                 <Radio className="w-4.5 h-4.5 text-[#c2185b]" />
-                <span>Все радиостанции</span>
+                <span>{lang === 'ru' ? 'Все радиостанции' : 'All Radio Stations'}</span>
               </div>
 
               {stations.length === 0 && !isLoading ? (
                 <div className="text-center py-12 text-[#9e9e9e] select-none">
                   <Search className="w-12 h-12 text-neutral-600 mx-auto mb-2.5" />
-                  <p className="font-bold text-sm">Ничего не найдено</p>
-                  <p className="text-xs text-neutral-500 mt-1">Попробуйте изменить запрос</p>
+                  <p className="font-bold text-sm">
+                    {lang === 'ru' ? 'Ничего не найдено' : 'No stations found'}
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {lang === 'ru' ? 'Попробуйте изменить запрос' : 'Try modifying your search query'}
+                  </p>
                 </div>
               ) : (
                 <div>
@@ -452,6 +555,7 @@ export default function App() {
                       isFavorite={isFavorite(item)}
                       onPlay={() => playStation(item)}
                       onToggleFavorite={() => toggleFavorite(item)}
+                      resolvedTheme={resolvedTheme}
                     />
                   ))}
 
@@ -459,7 +563,7 @@ export default function App() {
                   {hasMore && (
                     <div className="text-center py-5 text-[#9e9e9e] text-xs font-bold flex items-center justify-center gap-2 select-none">
                       <Loader2 className="w-4 h-4 text-[#c2185b] animate-spin" />
-                      Загрузка...
+                      {lang === 'ru' ? 'Загрузка...' : 'Loading...'}
                     </div>
                   )}
                 </div>
@@ -471,15 +575,17 @@ export default function App() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3 px-1.5 text-xs uppercase tracking-wider font-extrabold text-neutral-400 select-none">
                 <Heart className="w-4.5 h-4.5 text-[#c2185b] fill-[#c2185b]" />
-                <span>Избранное</span>
+                <span>{lang === 'ru' ? 'Избранное' : 'Favorites'}</span>
               </div>
 
               {favorites.length === 0 ? (
                 <div className="text-center py-12 text-[#9e9e9e] select-none">
                   <Heart className="w-12 h-12 text-neutral-600 mx-auto mb-2.5" />
-                  <p className="font-bold text-sm">Нет избранных станций</p>
+                  <p className="font-bold text-sm">
+                    {lang === 'ru' ? 'Нет избранных станций' : 'No favorite stations'}
+                  </p>
                   <p className="text-xs text-neutral-500 mt-1">
-                    Добавляйте любимые волны спонтанно!
+                    {lang === 'ru' ? 'Добавляйте любимые волны спонтанно!' : 'Add your favorite stations here!'}
                   </p>
                 </div>
               ) : (
@@ -495,6 +601,7 @@ export default function App() {
                       isFavorite={true}
                       onPlay={() => playStation(item)}
                       onToggleFavorite={() => toggleFavorite(item)}
+                      resolvedTheme={resolvedTheme}
                     />
                   ))}
                 </div>
@@ -502,7 +609,15 @@ export default function App() {
             </div>
           )}
 
-          {activeTab === 'about' && <AboutTab />}
+          {activeTab === 'settings' && (
+            <SettingsTab
+              theme={theme}
+              lang={lang}
+              onThemeChange={setTheme}
+              onLangChange={handleLangChange}
+              resolvedTheme={resolvedTheme}
+            />
+          )}
         </div>
 
         {/* Dynamic Media Controller docked at bottom */}
@@ -510,27 +625,39 @@ export default function App() {
           activeStation={selectedStation}
           isPlaying={isPlaying}
           status={status}
-          statusText={statusText}
+          statusText={getLocalizedStatusText(status, lang)}
           volume={volume}
           onPlayToggle={handlePlayToggle}
           onVolumeChange={setVolume}
+          lang={lang}
+          resolvedTheme={resolvedTheme}
+          theme={theme}
         />
 
         {/* Base navigation controllers matching .bottom-nav */}
         <nav 
-          className="flex items-center justify-around bg-[#1a1a1a] border-t border-white/[0.05] shrink-0 select-none"
-          style={{ padding: '6px 8px calc(var(--tg-safe-area-inset-bottom, 0px) + 6px)' }}
+          className={`flex items-center justify-around border-t shrink-0 select-none transition-colors duration-200 ${
+            resolvedTheme === 'light'
+              ? 'bg-white border-black/[0.05]'
+              : 'bg-[#1a1a1a] border-white/[0.05]'
+          }`}
+          style={{ 
+            padding: '6px 8px calc(var(--tg-safe-area-inset-bottom, 0px) + 6px)',
+            ...(theme === 'telegram' ? {
+              backgroundColor: 'var(--tg-theme-secondary-bg-color, #1a1a1a)',
+            } : {})
+          }}
         >
           <button
             onClick={() => setActiveTab('radio')}
             className={`flex flex-col items-center gap-[2px] text-[11px] font-semibold rounded-[30px] transition-all duration-150 flex-1 max-w-[100px] cursor-pointer py-1.5 px-3 ${
               activeTab === 'radio'
                 ? 'text-[#e91e63] bg-[#e91e63]/10'
-                : 'text-[#888888]'
+                : resolvedTheme === 'light' ? 'text-neutral-500 hover:text-neutral-800' : 'text-[#888888] hover:text-white'
             }`}
           >
             <Radio className="w-[22px] h-[22px]" />
-            <span>Радио</span>
+            <span>{lang === 'ru' ? 'Радио' : 'Radio'}</span>
           </button>
 
           <button
@@ -538,23 +665,23 @@ export default function App() {
             className={`flex flex-col items-center gap-[2px] text-[11px] font-semibold rounded-[30px] transition-all duration-150 flex-1 max-w-[100px] cursor-pointer py-1.5 px-3 ${
               activeTab === 'favorites'
                 ? 'text-[#e91e63] bg-[#e91e63]/10'
-                : 'text-[#888888]'
+                : resolvedTheme === 'light' ? 'text-neutral-500 hover:text-neutral-800' : 'text-[#888888] hover:text-white'
             }`}
           >
             <Heart className="w-[22px] h-[22px]" />
-            <span>Избранное</span>
+            <span>{lang === 'ru' ? 'Избранное' : 'Favorites'}</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('about')}
+            onClick={() => setActiveTab('settings')}
             className={`flex flex-col items-center gap-[2px] text-[11px] font-semibold rounded-[30px] transition-all duration-150 flex-1 max-w-[100px] cursor-pointer py-1.5 px-3 ${
-              activeTab === 'about'
+              activeTab === 'settings'
                 ? 'text-[#e91e63] bg-[#e91e63]/10'
-                : 'text-[#888888]'
+                : resolvedTheme === 'light' ? 'text-neutral-500 hover:text-neutral-800' : 'text-[#888888] hover:text-white'
             }`}
           >
-            <Info className="w-[22px] h-[22px]" />
-            <span>О нас</span>
+            <Settings className="w-[22px] h-[22px]" />
+            <span>{lang === 'ru' ? 'Настройки' : 'Settings'}</span>
           </button>
         </nav>
 

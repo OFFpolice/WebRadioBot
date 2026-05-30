@@ -10,6 +10,9 @@ interface PlayerBarProps {
   volume: number;
   onPlayToggle: () => void;
   onVolumeChange: (vol: number) => void;
+  lang?: 'ru' | 'en';
+  resolvedTheme?: 'dark' | 'light';
+  theme?: 'white' | 'black' | 'system' | 'telegram';
 }
 
 export default function PlayerBar({
@@ -20,12 +23,17 @@ export default function PlayerBar({
   volume,
   onPlayToggle,
   onVolumeChange,
+  lang = 'ru',
+  resolvedTheme = 'dark',
+  theme = 'black',
 }: PlayerBarProps) {
   const isMuted = volume === 0;
 
   const handleMuteToggle = () => {
     onVolumeChange(isMuted ? 1.0 : 0);
   };
+
+  const isLight = resolvedTheme === 'light';
 
   // Color mapping based on actual states
   const getStatusColor = () => {
@@ -42,8 +50,20 @@ export default function PlayerBar({
     }
   };
 
+  const containerBg = isLight ? 'bg-white' : 'bg-[#1e1e1e]';
+  const containerBorder = isLight ? 'border-t border-black/[0.05]' : 'border-t border-white/[0.08]';
+  const labelColor = isLight ? 'text-[#1c1c1e]' : 'text-white';
+  const statusBadgeColor = isLight ? 'text-neutral-500' : 'text-[#b0b0b0]';
+
+  const defaultStationText = lang === 'en' ? 'Choose a station' : 'Выберите станцию';
+
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] border-b border-white/[0.03] bg-[#1e1e1e] px-3 py-2 shrink-0 select-none">
+    <div 
+      className={`flex items-center justify-between gap-3 ${containerBorder} ${containerBg} border-b border-black/[0.01] px-3 py-2 shrink-0 select-none transition-colors duration-200`}
+      style={theme === 'telegram' ? {
+        backgroundColor: 'var(--tg-theme-secondary-bg-color, #1e1e1e)',
+      } : {}}
+    >
       {/* Play control trigger exactly matching .play-btn class */}
       <button
         onClick={onPlayToggle}
@@ -59,13 +79,13 @@ export default function PlayerBar({
 
       {/* Current status marquee info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-sm text-white truncate">
-          {activeStation ? activeStation.name : 'Выберите станцию'}
+        <h4 className={`font-semibold text-sm ${labelColor} truncate`}>
+          {activeStation ? activeStation.name : defaultStationText}
         </h4>
       </div>
 
       {/* Diagnostic indicator badge exactly matching .status-badge */}
-      <div className="flex items-center gap-1 text-[12px] text-[#b0b0b0] shrink-0">
+      <div className={`flex items-center gap-1 text-[12px] ${statusBadgeColor} shrink-0`}>
         {status === 'buffering' || status === 'waiting' ? (
           <Disc className="w-4 h-4 text-amber-500 animate-spin-custom" />
         ) : status === 'error' ? (

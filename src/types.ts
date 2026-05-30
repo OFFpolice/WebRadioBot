@@ -8,7 +8,7 @@ export interface Station {
   language?: string;
 }
 
-export type TabType = 'radio' | 'favorites' | 'about';
+export type TabType = 'radio' | 'favorites' | 'settings';
 
 export interface TelegramWebApp {
   ready: () => void;
@@ -18,6 +18,7 @@ export interface TelegramWebApp {
   enableClosingConfirmation: () => void;
   disableVerticalSwipes?: () => void;
   lockOrientation?: () => void;
+  colorScheme?: 'dark' | 'light';
   BackButton?: {
     show: () => void;
     hide: () => void;
