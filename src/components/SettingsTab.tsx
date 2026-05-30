@@ -1,56 +1,14 @@
 import React from 'react';
 import { ChevronRight, Radio, ExternalLink, Palette, Globe } from 'lucide-react';
+import translations from '../lang.json';
 
 interface SettingsTabProps {
-  theme: 'white' | 'black' | 'system' | 'telegram';
-  lang: 'ru' | 'en';
-  onThemeChange: (newTheme: 'white' | 'black' | 'system' | 'telegram') => void;
-  onLangChange: (newLang: 'ru' | 'en') => void;
+  theme: 'white' | 'black' | 'system';
+  lang: 'ru' | 'en' | 'uk';
+  onThemeChange: (newTheme: 'white' | 'black' | 'system') => void;
+  onLangChange: (newLang: 'ru' | 'en' | 'uk') => void;
   resolvedTheme: 'dark' | 'light';
 }
-
-const texts = {
-  ru: {
-    settingsTitle: 'Настройки',
-    themeLabel: 'Тема оформления',
-    themeWhite: 'Светлая',
-    themeBlack: 'Темная',
-    themeSystem: 'Система',
-    themeTelegram: 'Telegram',
-    
-    langLabel: 'Язык интерфейса',
-    langRu: 'Русский',
-    langEn: 'English',
-    
-    aboutLabel: 'О проекте WebRadioBot',
-    aboutDesc: 'Слушайте тысячи радиостанций со всего мира. Добавляйте любимые в избранное.',
-    tgContact: 'Свяжитесь с нами',
-    shareButton: 'Поделиться',
-    shareFriends: 'Расскажите друзьям',
-    devApi: 'API Для разработчиков!',
-    version: 'Версия 0.0.4 · Telegram Mini App',
-  },
-  en: {
-    settingsTitle: 'Settings',
-    themeLabel: 'Appearance Theme',
-    themeWhite: 'Light',
-    themeBlack: 'Dark',
-    themeSystem: 'System',
-    themeTelegram: 'Telegram',
-    
-    langLabel: 'Interface Language',
-    langRu: 'Russian',
-    langEn: 'English',
-    
-    aboutLabel: 'About WebRadioBot',
-    aboutDesc: 'Listen to thousands of radio stations from all over the world. Add your favorite stations to favorites.',
-    tgContact: 'Contact Us',
-    shareButton: 'Share App',
-    shareFriends: 'Tell your friends',
-    devApi: 'API for Developers!',
-    version: 'Version 0.0.4 · Telegram Mini App',
-  }
-};
 
 export default function SettingsTab({
   theme,
@@ -60,9 +18,11 @@ export default function SettingsTab({
   resolvedTheme,
 }: SettingsTabProps) {
   const isLight = resolvedTheme === 'light';
-  const t = texts[lang];
+  
+  // Safe fallback to English translations if the language is unknown
+  const t = translations[lang] || translations['en'];
 
-  // Colors
+  // Theme-sensitive colors
   const cardBg = isLight ? 'bg-white' : 'bg-[#1e1e1e]';
   const cardBorder = isLight ? 'border-black/[0.05]' : 'border-white/[0.03]';
   const labelColor = isLight ? 'text-[#1c1c1e]' : 'text-white';
@@ -92,8 +52,8 @@ export default function SettingsTab({
           </span>
         </div>
         
-        {/* Segmented Control */}
-        <div className={`grid grid-cols-4 gap-1 p-1 rounded-xl ${segmentBg}`}>
+        {/* Segmented Control - 3 columns for Light, Dark, System */}
+        <div className={`grid grid-cols-3 gap-1 p-1 rounded-xl ${segmentBg}`}>
           <button
             onClick={() => onThemeChange('white')}
             className={`text-[12px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(theme === 'white')}`}
@@ -112,12 +72,6 @@ export default function SettingsTab({
           >
             {t.themeSystem}
           </button>
-          <button
-            onClick={() => onThemeChange('telegram')}
-            className={`text-[12px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(theme === 'telegram')}`}
-          >
-            {t.themeTelegram}
-          </button>
         </div>
       </div>
 
@@ -130,19 +84,25 @@ export default function SettingsTab({
           </span>
         </div>
         
-        {/* Segmented Control */}
-        <div className={`grid grid-cols-2 gap-1 p-1 rounded-xl ${segmentBg}`}>
+        {/* Segmented Control - 3 columns for Russian, English, Ukrainian */}
+        <div className={`grid grid-cols-3 gap-1 p-1 rounded-xl ${segmentBg}`}>
           <button
             onClick={() => onLangChange('ru')}
-            className={`text-[13px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'ru')}`}
+            className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'ru')}`}
           >
             {t.langRu}
           </button>
           <button
             onClick={() => onLangChange('en')}
-            className={`text-[13px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'en')}`}
+            className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'en')}`}
           >
             {t.langEn}
+          </button>
+          <button
+            onClick={() => onLangChange('uk')}
+            className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'uk')}`}
+          >
+            {t.langUk}
           </button>
         </div>
       </div>

@@ -19,6 +19,11 @@ export interface TelegramWebApp {
   disableVerticalSwipes?: () => void;
   lockOrientation?: () => void;
   colorScheme?: 'dark' | 'light';
+  initDataUnsafe?: {
+    user?: {
+      language_code?: string;
+    };
+  };
   BackButton?: {
     show: () => void;
     hide: () => void;

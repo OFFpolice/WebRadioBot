@@ -5,6 +5,7 @@ import Loader from './components/Loader';
 import StationCard from './components/StationCard';
 import PlayerBar from './components/PlayerBar';
 import SettingsTab from './components/SettingsTab';
+import translations from './lang.json';
 
 const LIMIT = 100;
 const FALLBACK_SERVERS = [
@@ -48,12 +49,49 @@ export default function App() {
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
 
   // Theme & Language states with LocalStorage persistence
-  const [theme, setTheme] = useState<'white' | 'black' | 'system' | 'telegram'>(() => {
-    return (localStorage.getItem('webradio_theme') as any) || 'black';
+  const [theme, setTheme] = useState<'white' | 'black' | 'system'>(() => {
+    const saved = localStorage.getItem('webradio_theme');
+    if (saved === 'white' || saved === 'black' || saved === 'system') {
+      return saved as 'white' | 'black' | 'system';
+    }
+    // "тема по умолчанию должна быть система если не удалось определить тему"
+    // Try to determine theme from Telegram colorScheme
+    const tg = window.Telegram?.WebApp;
+    if (tg?.colorScheme) {
+      return tg.colorScheme === 'dark' ? 'black' : 'white';
+    }
+    return 'system';
   });
-  const [lang, setLang] = useState<'ru' | 'en'>(() => {
-    return (localStorage.getItem('webradio_lang') as any) || 'ru';
+
+  const [lang, setLang] = useState<'ru' | 'en' | 'uk'>(() => {
+    const saved = localStorage.getItem('webradio_lang');
+    if (saved === 'ru' || saved === 'en' || saved === 'uk') {
+      return saved as 'ru' | 'en' | 'uk';
+    }
+
+    // "язык нужно определить автоматически ... английский язык должен быть по умолчанию если не удалось определить язык"
+    // 1. Try Telegram WebApp user language_code
+    const tgLang = window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
+    if (tgLang) {
+      const code = tgLang.toLowerCase();
+      if (code.startsWith('ru')) return 'ru';
+      if (code.startsWith('uk') || code.startsWith('ua')) return 'uk';
+      if (code.startsWith('en')) return 'en';
+    }
+
+    // 2. Try window.navigator.language
+    const navLang = window.navigator.language || (window.navigator as any).userLanguage;
+    if (navLang) {
+      const code = navLang.toLowerCase();
+      if (code.startsWith('ru')) return 'ru';
+      if (code.startsWith('uk') || code.startsWith('ua')) return 'uk';
+      if (code.startsWith('en')) return 'en';
+    }
+
+    // 3. Default fallback is English
+    return 'en';
   });
+
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
 
   // Sync resolved theme reactively
@@ -76,44 +114,34 @@ export default function App() {
       mq.addEventListener('change', listener);
       return () => mq.removeEventListener('change', listener);
     }
-    if (theme === 'telegram') {
-      const tg = window.Telegram?.WebApp;
-      if (tg) {
-        if (tg.colorScheme) {
-          setResolvedTheme(tg.colorScheme === 'dark' ? 'dark' : 'light');
-          return;
-        }
-      }
-      setResolvedTheme('dark');
-    }
   }, [theme]);
 
-  const handleLangChange = (newLang: 'ru' | 'en') => {
+  // Dynamically update loader text when language changes or loads
+  useEffect(() => {
+    if (lang === 'uk') {
+      setLoaderText('Ініціалізація...');
+    } else if (lang === 'en') {
+      setLoaderText('Initializing...');
+    } else {
+      setLoaderText('Инициализация...');
+    }
+  }, [lang]);
+
+  const handleLangChange = (newLang: 'ru' | 'en' | 'uk') => {
     setLang(newLang);
     localStorage.setItem('webradio_lang', newLang);
   };
 
-  const getLocalizedStatusText = (currentStatus: string, currentLang: 'ru' | 'en') => {
-    if (currentLang === 'en') {
-      switch (currentStatus) {
-        case 'idle': return 'Ready';
-        case 'playing': return 'Playing';
-        case 'paused': return 'Paused';
-        case 'buffering': return 'Buffering...';
-        case 'error': return 'Stream error';
-        case 'waiting': return 'Buffering...';
-        default: return 'Waiting';
-      }
-    } else {
-      switch (currentStatus) {
-        case 'idle': return 'Готово';
-        case 'playing': return 'Играет';
-        case 'paused': return 'Пауза';
-        case 'buffering': return 'Буферизация...';
-        case 'error': return 'Ошибка потока';
-        case 'waiting': return 'Буферизация...';
-        default: return 'Ожидание';
-      }
+  const getLocalizedStatusText = (currentStatus: string, currentLang: 'ru' | 'en' | 'uk') => {
+    const t = translations[currentLang] || translations['en'];
+    switch (currentStatus) {
+      case 'idle': return t.statusIdle;
+      case 'playing': return t.statusPlaying;
+      case 'paused': return t.statusPaused;
+      case 'buffering': return t.statusBuffering;
+      case 'error': return t.statusError;
+      case 'waiting': return t.statusWaiting;
+      default: return t.statusIdle;
     }
   };
 
@@ -455,6 +483,8 @@ export default function App() {
     return favorites.some((f) => f.url_resolved === station.url_resolved);
   };
 
+  const t = translations[lang] || translations['en'];
+
   return (
     <div className="flex justify-center w-full min-h-screen bg-[#0e0e0e] text-white font-sans antialiased">
       {/* Visual Splash transition loaders */}
@@ -466,10 +496,6 @@ export default function App() {
 
       <div 
         className={`w-full max-w-[500px] h-screen flex flex-col relative overflow-hidden shadow-2xl transition-colors duration-200 ${resolvedTheme === 'light' ? 'bg-[#f7f8fa] text-[#1c1c1e]' : 'bg-[#121212] text-white'}`}
-        style={theme === 'telegram' ? {
-          backgroundColor: 'var(--tg-theme-bg-color, #121212)',
-          color: 'var(--tg-theme-text-color, #ffffff)',
-        } : {}}
       >
         {/* App Title Header exactly like .app-header */}
         <header 
@@ -478,11 +504,8 @@ export default function App() {
               ? 'bg-white border-b border-black/[0.05]' 
               : 'bg-[#1e1e1e] border-b border-white/[0.05]'
           }`}
-          style={theme === 'telegram' ? {
-            backgroundColor: 'var(--tg-theme-secondary-bg-color, #1e1e1e)',
-          } : {}}
         >
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block mb-1 tracking-[-0.5px] select-none">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-1.5 mb-1 tracking-[-0.5px] select-none">
             WebRadioBot
           </h1>
 
@@ -494,23 +517,17 @@ export default function App() {
                   ? 'bg-neutral-100 border-black/[0.06]'
                   : 'bg-[#2c2c2c] border-white/[0.08]'
               }`}
-              style={theme === 'telegram' ? {
-                backgroundColor: 'var(--tg-theme-bg-color, #121212)',
-              } : {}}
             >
               <Search className="w-[18px] h-[18px] text-[#9e9e9e] mr-2 shrink-0" />
               <input
                 type="text"
-                placeholder={lang === 'ru' ? 'Поиск станций...' : 'Search stations...'}
+                placeholder={t.searchPlaceholder}
                 autoComplete="off"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`w-full bg-transparent border-none outline-none text-[16px] py-3 px-0 font-medium placeholder-[#9e9e9e] focus:outline-none ${
                   resolvedTheme === 'light' ? 'text-[#1c1c1e]' : 'text-white'
                 }`}
-                style={theme === 'telegram' ? {
-                  color: 'var(--tg-theme-text-color, #ffffff)',
-                } : {}}
               />
               {isLoading && (
                 <Loader2 className="w-4 h-4 text-[#c2185b] animate-spin shrink-0 mr-1" />
@@ -529,17 +546,17 @@ export default function App() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3 px-1.5 text-xs uppercase tracking-wider font-extrabold text-neutral-400 select-none">
                 <Radio className="w-4.5 h-4.5 text-[#c2185b]" />
-                <span>{lang === 'ru' ? 'Все радиостанции' : 'All Radio Stations'}</span>
+                <span>{t.allRadioStations}</span>
               </div>
 
               {stations.length === 0 && !isLoading ? (
                 <div className="text-center py-12 text-[#9e9e9e] select-none">
                   <Search className="w-12 h-12 text-neutral-600 mx-auto mb-2.5" />
                   <p className="font-bold text-sm">
-                    {lang === 'ru' ? 'Ничего не найдено' : 'No stations found'}
+                    {t.noStationsFound}
                   </p>
                   <p className="text-xs text-neutral-500 mt-1">
-                    {lang === 'ru' ? 'Попробуйте изменить запрос' : 'Try modifying your search query'}
+                    {t.tryModifyingQuery}
                   </p>
                 </div>
               ) : (
@@ -563,7 +580,7 @@ export default function App() {
                   {hasMore && (
                     <div className="text-center py-5 text-[#9e9e9e] text-xs font-bold flex items-center justify-center gap-2 select-none">
                       <Loader2 className="w-4 h-4 text-[#c2185b] animate-spin" />
-                      {lang === 'ru' ? 'Загрузка...' : 'Loading...'}
+                      {t.loading}
                     </div>
                   )}
                 </div>
@@ -575,17 +592,17 @@ export default function App() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3 px-1.5 text-xs uppercase tracking-wider font-extrabold text-neutral-400 select-none">
                 <Heart className="w-4.5 h-4.5 text-[#c2185b] fill-[#c2185b]" />
-                <span>{lang === 'ru' ? 'Избранное' : 'Favorites'}</span>
+                <span>{t.favoritesLabel}</span>
               </div>
 
               {favorites.length === 0 ? (
                 <div className="text-center py-12 text-[#9e9e9e] select-none">
                   <Heart className="w-12 h-12 text-neutral-600 mx-auto mb-2.5" />
                   <p className="font-bold text-sm">
-                    {lang === 'ru' ? 'Нет избранных станций' : 'No favorite stations'}
+                    {t.noFavoriteStations}
                   </p>
                   <p className="text-xs text-neutral-500 mt-1">
-                    {lang === 'ru' ? 'Добавляйте любимые волны спонтанно!' : 'Add your favorite stations here!'}
+                    {t.addFavoritesHint}
                   </p>
                 </div>
               ) : (
@@ -642,10 +659,7 @@ export default function App() {
               : 'bg-[#1a1a1a] border-white/[0.05]'
           }`}
           style={{ 
-            padding: '6px 8px calc(var(--tg-safe-area-inset-bottom, 0px) + 6px)',
-            ...(theme === 'telegram' ? {
-              backgroundColor: 'var(--tg-theme-secondary-bg-color, #1a1a1a)',
-            } : {})
+            padding: '6px 8px calc(var(--tg-safe-area-inset-bottom, 0px) + 6px)'
           }}
         >
           <button
@@ -657,7 +671,7 @@ export default function App() {
             }`}
           >
             <Radio className="w-[22px] h-[22px]" />
-            <span>{lang === 'ru' ? 'Радио' : 'Radio'}</span>
+            <span>{t.navRadio}</span>
           </button>
 
           <button
@@ -669,7 +683,7 @@ export default function App() {
             }`}
           >
             <Heart className="w-[22px] h-[22px]" />
-            <span>{lang === 'ru' ? 'Избранное' : 'Favorites'}</span>
+            <span>{t.navFavorites}</span>
           </button>
 
           <button
@@ -681,7 +695,7 @@ export default function App() {
             }`}
           >
             <Settings className="w-[22px] h-[22px]" />
-            <span>{lang === 'ru' ? 'Настройки' : 'Settings'}</span>
+            <span>{t.navSettings}</span>
           </button>
         </nav>
 

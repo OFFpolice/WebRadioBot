@@ -1,6 +1,7 @@
 import React from 'react';
-import { Play, Pause, Volume2, VolumeX, AlertCircle, Radio, Disc } from 'lucide-react';
+import { Play, Pause, AlertCircle, Radio, Disc } from 'lucide-react';
 import { Station } from '../types';
+import translations from '../lang.json';
 
 interface PlayerBarProps {
   activeStation: Station | null;
@@ -10,9 +11,9 @@ interface PlayerBarProps {
   volume: number;
   onPlayToggle: () => void;
   onVolumeChange: (vol: number) => void;
-  lang?: 'ru' | 'en';
+  lang?: 'ru' | 'en' | 'uk';
   resolvedTheme?: 'dark' | 'light';
-  theme?: 'white' | 'black' | 'system' | 'telegram';
+  theme?: 'white' | 'black' | 'system';
 }
 
 export default function PlayerBar({
@@ -23,16 +24,10 @@ export default function PlayerBar({
   volume,
   onPlayToggle,
   onVolumeChange,
-  lang = 'ru',
+  lang = 'en',
   resolvedTheme = 'dark',
-  theme = 'black',
+  theme = 'system',
 }: PlayerBarProps) {
-  const isMuted = volume === 0;
-
-  const handleMuteToggle = () => {
-    onVolumeChange(isMuted ? 1.0 : 0);
-  };
-
   const isLight = resolvedTheme === 'light';
 
   // Color mapping based on actual states
@@ -55,14 +50,13 @@ export default function PlayerBar({
   const labelColor = isLight ? 'text-[#1c1c1e]' : 'text-white';
   const statusBadgeColor = isLight ? 'text-neutral-500' : 'text-[#b0b0b0]';
 
-  const defaultStationText = lang === 'en' ? 'Choose a station' : 'Выберите станцию';
+  // Get localized default text
+  const t = translations[lang] || translations['en'];
+  const defaultStationText = t.chooseStation;
 
   return (
     <div 
       className={`flex items-center justify-between gap-3 ${containerBorder} ${containerBg} border-b border-black/[0.01] px-3 py-2 shrink-0 select-none transition-colors duration-200`}
-      style={theme === 'telegram' ? {
-        backgroundColor: 'var(--tg-theme-secondary-bg-color, #1e1e1e)',
-      } : {}}
     >
       {/* Play control trigger exactly matching .play-btn class */}
       <button
