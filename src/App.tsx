@@ -505,7 +505,7 @@ export default function App() {
               : 'bg-[#1e1e1e] border-b border-white/[0.05]'
           }`}
         >
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-1.5 mb-1 tracking-[-0.5px] select-none">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-1 mb-1 tracking-[-0.5px] select-none">
             WebRadioBot
           </h1>
 
