@@ -1,0 +1,6 @@
+{
+  "name": "WebRadioBot",
+  "description": "Listen to thousands of radio stations from around the world.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
