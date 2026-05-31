@@ -6,7 +6,6 @@ import StationCard from './components/StationCard';
 import PlayerBar from './components/PlayerBar';
 import SettingsTab from './components/SettingsTab';
 import translations from './lang.json';
-import { triggerVibration } from './utils/vibration';
 
 const LIMIT = 100;
 const FALLBACK_SERVERS = [
@@ -38,11 +37,6 @@ export default function App() {
     return null;
   });
   const [favorites, setFavorites] = useState<Station[]>([]);
-
-  // Vibration settings with LocalStorage persistence
-  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('webradio_vibration') !== 'false';
-  });
 
   // Search & Pagination triggers
   const [searchQuery, setSearchQuery] = useState('');
@@ -172,14 +166,6 @@ export default function App() {
     localStorage.setItem('webradio_lang', newLang);
   };
 
-  const handleVibrationChange = (enabled: boolean) => {
-    setVibrationEnabled(enabled);
-    localStorage.setItem('webradio_vibration', enabled ? 'true' : 'false');
-    if (enabled) {
-      triggerVibration('light');
-    }
-  };
-
   const getLocalizedStatusText = (currentStatus: string, currentLang: 'ru' | 'en' | 'uk') => {
     const t = translations[currentLang] || translations['en'];
     switch (currentStatus) {
@@ -292,11 +278,6 @@ export default function App() {
         backButton.hide();
       }
     }
-  }, [activeTab]);
-
-  // Trigger feedback vibration on tab switches
-  useEffect(() => {
-    triggerVibration('select');
   }, [activeTab]);
 
   // 7. Initialize Audio Event listeners to manage stream buffers
@@ -432,7 +413,6 @@ export default function App() {
 
   // Toggle active play states
   const playStation = (station: Station) => {
-    triggerVibration('medium');
     setSelectedStation(station);
 
     // Save playing identifiers back to persistent storage
@@ -465,7 +445,6 @@ export default function App() {
   };
 
   const handlePlayToggle = () => {
-    triggerVibration('light');
     if (!selectedStation) {
       setStatusText('Выберите станцию');
       return;
@@ -494,7 +473,6 @@ export default function App() {
   };
 
   const toggleFavorite = (station: Station) => {
-    triggerVibration('light');
     let updatedFavorites: Station[] = [];
     const isFav = favorites.some((f) => f.url_resolved === station.url_resolved);
 
@@ -675,8 +653,6 @@ export default function App() {
               onThemeChange={setTheme}
               onLangChange={handleLangChange}
               resolvedTheme={resolvedTheme}
-              vibrationEnabled={vibrationEnabled}
-              onVibrationChange={handleVibrationChange}
             />
           )}
         </div>
