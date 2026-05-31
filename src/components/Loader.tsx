@@ -6,17 +6,20 @@ interface LoaderProps {
   progress: number;
   text: string;
   isVisible: boolean;
+  resolvedTheme?: 'dark' | 'light';
 }
 
-export default function Loader({ progress, text, isVisible }: LoaderProps) {
+export default function Loader({ progress, text, isVisible, resolvedTheme = 'dark' }: LoaderProps) {
+  const isLight = resolvedTheme === 'light';
+
   return (
     <motion.div
       initial={{ opacity: 1 }}
       animate={{ opacity: isVisible ? 1 : 0 }}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
-      className={`fixed inset-0 z-50 bg-[#0e0e0e] flex flex-col items-center justify-center ${
-        !isVisible ? 'pointer-events-none' : ''
-      }`}
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-colors duration-300 ${
+        isLight ? 'bg-[#f7f8fa]' : 'bg-[#0e0e0e]'
+      } ${!isVisible ? 'pointer-events-none' : ''}`}
     >
       {/* Visual Pulsar */}
       <div className="relative w-24 h-24 mb-7 flex items-center justify-center">
@@ -36,7 +39,7 @@ export default function Loader({ progress, text, isVisible }: LoaderProps) {
       >
         WebRadioBot
       </h2>
-      <p className="text-[13px] text-[#666666] font-medium mb-[40px] tracking-[0.3px]">
+      <p className={`text-[13px] font-medium mb-[40px] tracking-[0.3px] ${isLight ? 'text-neutral-500' : 'text-[#666666]'}`}>
         Тысячи станций со всего мира
       </p>
 
@@ -52,7 +55,7 @@ export default function Loader({ progress, text, isVisible }: LoaderProps) {
       </div>
 
       {/* Progress Track */}
-      <div className="w-[200px] h-[3px] bg-[#2a2a2a] rounded-full overflow-hidden">
+      <div className={`w-[200px] h-[3px] rounded-full overflow-hidden ${isLight ? 'bg-neutral-200' : 'bg-[#2a2a2a]'}`}>
         <div
           className="h-full bg-gradient-to-r from-[#c2185b] to-[#f06292] rounded-full shadow-[0_0_8px_rgba(233,30,99,0.6)] transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
@@ -60,7 +63,7 @@ export default function Loader({ progress, text, isVisible }: LoaderProps) {
       </div>
 
       {/* Status Text label */}
-      <span className="mt-[10px] text-xs text-[#555555] font-bold tracking-wider">
+      <span className={`mt-[10px] text-xs font-bold tracking-wider ${isLight ? 'text-neutral-400' : 'text-[#555555]'}`}>
         {text}
       </span>
     </motion.div>

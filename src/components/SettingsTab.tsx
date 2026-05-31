@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Radio, ExternalLink, Palette, Globe } from 'lucide-react';
+import { ChevronRight, Radio, ExternalLink, Palette, Globe, Smartphone } from 'lucide-react';
 import translations from '../lang.json';
 
 interface SettingsTabProps {
@@ -8,6 +8,8 @@ interface SettingsTabProps {
   onThemeChange: (newTheme: 'white' | 'black' | 'system') => void;
   onLangChange: (newLang: 'ru' | 'en' | 'uk') => void;
   resolvedTheme: 'dark' | 'light';
+  vibrationEnabled: boolean;
+  onVibrationChange: (enabled: boolean) => void;
 }
 
 export default function SettingsTab({
@@ -16,6 +18,8 @@ export default function SettingsTab({
   onThemeChange,
   onLangChange,
   resolvedTheme,
+  vibrationEnabled,
+  onVibrationChange,
 }: SettingsTabProps) {
   const isLight = resolvedTheme === 'light';
   
@@ -103,6 +107,32 @@ export default function SettingsTab({
             className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'uk')}`}
           >
             {t.langUk}
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Vibration feedback selection block */}
+      <div className={`p-4 rounded-2xl ${cardBg} border ${cardBorder} flex flex-col gap-3.5 shadow-sm`}>
+        <div className="flex items-center gap-2">
+          <Smartphone className="w-5 h-5 text-[#c2185b]" />
+          <span className={`text-[15px] font-bold ${labelColor}`}>
+            {t.vibrationLabel}
+          </span>
+        </div>
+        
+        {/* Segmented Control - 2 columns for Vibration On vs Off */}
+        <div className={`grid grid-cols-2 gap-1 p-1 rounded-xl ${segmentBg}`}>
+          <button
+            onClick={() => onVibrationChange(true)}
+            className={`text-[12.5px] py-1.5 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(vibrationEnabled)}`}
+          >
+            {t.vibrationOn}
+          </button>
+          <button
+            onClick={() => onVibrationChange(false)}
+            className={`text-[12.5px] py-1.5 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(!vibrationEnabled)}`}
+          >
+            {t.vibrationOff}
           </button>
         </div>
       </div>

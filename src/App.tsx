@@ -6,6 +6,7 @@ import StationCard from './components/StationCard';
 import PlayerBar from './components/PlayerBar';
 import SettingsTab from './components/SettingsTab';
 import translations from './lang.json';
+import { triggerVibration } from './utils/vibration';
 
 const LIMIT = 100;
 const FALLBACK_SERVERS = [
@@ -19,8 +20,29 @@ export default function App() {
   // Navigation & View tab states
   const [activeTab, setActiveTab] = useState<TabType>('radio');
   const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [selectedStation, setSelectedStation] = useState<Station | null>(() => {
+    try {
+      const lastUrl = localStorage.getItem('webradio_last_url');
+      const lastName = localStorage.getItem('webradio_last_name');
+      const lastFavicon = localStorage.getItem('webradio_last_favicon');
+      if (lastUrl && lastName) {
+        return {
+          url_resolved: lastUrl,
+          name: lastName,
+          favicon: lastFavicon || '',
+        };
+      }
+    } catch (e) {
+      console.warn('LocalStorage last station read failed', e);
+    }
+    return null;
+  });
   const [favorites, setFavorites] = useState<Station[]>([]);
+
+  // Vibration settings with LocalStorage persistence
+  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('webradio_vibration') !== 'false';
+  });
 
   // Search & Pagination triggers
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,7 +114,25 @@ export default function App() {
     return 'en';
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
+  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('webradio_theme') || 'system';
+      if (saved === 'black') return 'dark';
+      if (saved === 'white') return 'light';
+      if (saved === 'system') {
+        const tg = window.Telegram?.WebApp;
+        if (tg?.colorScheme) {
+          return tg.colorScheme === 'dark' ? 'dark' : 'light';
+        }
+        if (typeof window !== 'undefined' && window.matchMedia) {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+      }
+    } catch (e) {
+      console.warn('Theme resolution during initialization missed', e);
+    }
+    return 'dark'; // safe default
+  });
 
   // Sync resolved theme reactively
   useEffect(() => {
@@ -130,6 +170,14 @@ export default function App() {
   const handleLangChange = (newLang: 'ru' | 'en' | 'uk') => {
     setLang(newLang);
     localStorage.setItem('webradio_lang', newLang);
+  };
+
+  const handleVibrationChange = (enabled: boolean) => {
+    setVibrationEnabled(enabled);
+    localStorage.setItem('webradio_vibration', enabled ? 'true' : 'false');
+    if (enabled) {
+      triggerVibration('light');
+    }
   };
 
   const getLocalizedStatusText = (currentStatus: string, currentLang: 'ru' | 'en' | 'uk') => {
@@ -190,21 +238,6 @@ export default function App() {
       if (storedFavs) {
         setFavorites(JSON.parse(storedFavs));
       }
-
-      const lastUrl = localStorage.getItem('webradio_last_url');
-      const lastName = localStorage.getItem('webradio_last_name');
-      const lastFavicon = localStorage.getItem('webradio_last_favicon');
-
-      if (lastUrl && lastName) {
-        const cachedStation: Station = {
-          url_resolved: lastUrl,
-          name: lastName,
-          favicon: lastFavicon || '',
-        };
-        setSelectedStation(cachedStation);
-        setStatus('idle');
-        setStatusText('Готово');
-      }
     } catch (e) {
       console.error('Error restoring localStorage parameters', e);
     }
@@ -259,6 +292,11 @@ export default function App() {
         backButton.hide();
       }
     }
+  }, [activeTab]);
+
+  // Trigger feedback vibration on tab switches
+  useEffect(() => {
+    triggerVibration('select');
   }, [activeTab]);
 
   // 7. Initialize Audio Event listeners to manage stream buffers
@@ -394,6 +432,7 @@ export default function App() {
 
   // Toggle active play states
   const playStation = (station: Station) => {
+    triggerVibration('medium');
     setSelectedStation(station);
 
     // Save playing identifiers back to persistent storage
@@ -426,6 +465,7 @@ export default function App() {
   };
 
   const handlePlayToggle = () => {
+    triggerVibration('light');
     if (!selectedStation) {
       setStatusText('Выберите станцию');
       return;
@@ -454,6 +494,7 @@ export default function App() {
   };
 
   const toggleFavorite = (station: Station) => {
+    triggerVibration('light');
     let updatedFavorites: Station[] = [];
     const isFav = favorites.some((f) => f.url_resolved === station.url_resolved);
 
@@ -492,6 +533,7 @@ export default function App() {
         progress={loaderProgress}
         text={loaderText}
         isVisible={isLoaderVisible}
+        resolvedTheme={resolvedTheme}
       />
 
       <div 
@@ -633,6 +675,8 @@ export default function App() {
               onThemeChange={setTheme}
               onLangChange={handleLangChange}
               resolvedTheme={resolvedTheme}
+              vibrationEnabled={vibrationEnabled}
+              onVibrationChange={handleVibrationChange}
             />
           )}
         </div>
