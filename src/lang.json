@@ -15,7 +15,7 @@
     "shareButton": "Поделиться",
     "shareFriends": "Расскажите друзьям",
     "devApi": "API Для разработчиков!",
-    "version": "Версия 0.0.4 · Telegram Mini App",
+    "version": "Версия 0.0.5 · Telegram Mini App",
     "chooseStation": "Выберите станцию",
     "searchPlaceholder": "Поиск станций...",
     "allRadioStations": "Все радиостанции",
@@ -33,7 +33,12 @@
     "statusPaused": "Пауза",
     "statusBuffering": "Буферизация...",
     "statusError": "Ошибка потока",
-    "statusWaiting": "Буферизация..."
+    "statusWaiting": "Буферизация...",
+    "userProfileLabel": "Профиль пользователя",
+    "userFirstName": "Имя",
+    "userLastName": "Фамилия",
+    "userUsername": "Юзернейм",
+    "userGuest": "Гость веб-версии"
   },
   "en": {
     "settingsTitle": "Settings",
@@ -51,7 +56,7 @@
     "shareButton": "Share App",
     "shareFriends": "Tell your friends",
     "devApi": "API for Developers!",
-    "version": "Version 0.0.4 · Telegram Mini App",
+    "version": "Version 0.0.5 · Telegram Mini App",
     "chooseStation": "Choose a station",
     "searchPlaceholder": "Search stations...",
     "allRadioStations": "All Radio Stations",
@@ -69,7 +74,12 @@
     "statusPaused": "Paused",
     "statusBuffering": "Buffering...",
     "statusError": "Stream error",
-    "statusWaiting": "Buffering..."
+    "statusWaiting": "Buffering...",
+    "userProfileLabel": "User Profile",
+    "userFirstName": "First Name",
+    "userLastName": "Last Name",
+    "userUsername": "Username",
+    "userGuest": "Web App Guest"
   },
   "uk": {
     "settingsTitle": "Налаштування",
@@ -87,7 +97,7 @@
     "shareButton": "Поділитися",
     "shareFriends": "Розповісти друзям",
     "devApi": "API для розробників!",
-    "version": "Версія 0.0.4 · Telegram Mini App",
+    "version": "Версія 0.0.5 · Telegram Mini App",
     "chooseStation": "Оберіть станцію",
     "searchPlaceholder": "Пошук станцій...",
     "allRadioStations": "Усі радіостанції",
@@ -105,6 +115,11 @@
     "statusPaused": "Пауза",
     "statusBuffering": "Буферизація...",
     "statusError": "Помилка потоку",
-    "statusWaiting": "Буферизація..."
+    "statusWaiting": "Буферизація...",
+    "userProfileLabel": "Профіль користувача",
+    "userFirstName": "Ім'я",
+    "userLastName": "Прізвище",
+    "userUsername": "Юзернейм",
+    "userGuest": "Гість веб-версії"
   }
 }

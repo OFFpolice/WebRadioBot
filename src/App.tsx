@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Heart, Radio, Settings, ArrowUp, Loader2 } from 'lucide-react';
+import { Search, Heart, Radio, Settings, ArrowUp, Loader2, X } from 'lucide-react';
 import { Station, TabType } from './types';
 import Loader from './components/Loader';
 import StationCard from './components/StationCard';
@@ -12,8 +12,25 @@ const FALLBACK_SERVERS = [
   'https://de1.api.radio-browser.info',
   'https://fr1.api.radio-browser.info',
   'https://nl1.api.radio-browser.info',
-  'https://at1.api.radio-browser.info'
+  'https://at1.api.radio-browser.info',
+  'https://co1.api.radio-browser.info',
+  'https://us1.api.radio-browser.info'
 ];
+
+const sanitizeInput = (val: string): string => {
+  if (!val) return '';
+  // Remove HTML tag patterns (XSS prevention)
+  let clean = val.replace(/<[^>]*>?/gm, '');
+  
+  // Remove SQL injection hazards and escape sequences
+  clean = clean
+    .replace(/['"`;\\]/g, '')
+    .replace(/--/g, '')
+    .replace(/\/\*/g, '')
+    .replace(/\*\//g, '');
+
+  return clean;
+};
 
 export default function App() {
   // Navigation & View tab states
@@ -63,6 +80,12 @@ export default function App() {
   // DOM and Audio References
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
+
+  // Audio playback retry and fallback references
+  const playbackUrlsRef = useRef<string[]>([]);
+  const currentUrlIndexRef = useRef<number>(0);
+  const playbackTimeoutRef = useRef<any>(null);
+  const selectedStationRef = useRef<Station | null>(null);
 
   // Theme & Language states with LocalStorage persistence
   const [theme, setTheme] = useState<'white' | 'black' | 'system'>(() => {
@@ -237,6 +260,11 @@ export default function App() {
     };
   }, []);
 
+  // Keep selectedStationRef in sync with selectedStation state
+  useEffect(() => {
+    selectedStationRef.current = selectedStation;
+  }, [selectedStation]);
+
   // 3. Keep audio volume synced with range input updates
   useEffect(() => {
     if (audioRef.current) {
@@ -274,15 +302,119 @@ export default function App() {
         return () => {
           backButton.offClick(handleBackClick);
         };
+      } else if (searchQuery.trim() !== '') {
+        backButton.show();
+        const handleBackClick = () => {
+          setSearchQuery('');
+        };
+        backButton.onClick(handleBackClick);
+        return () => {
+          backButton.offClick(handleBackClick);
+        };
       } else {
         backButton.hide();
       }
     }
+  }, [activeTab, searchQuery]);
+
+  // 6b. Handle Telegram Settings Button integration
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    const settingsButton = tg?.SettingsButton;
+
+    if (settingsButton) {
+      if (activeTab !== 'settings') {
+        settingsButton.show();
+        const handleSettingsClick = () => {
+          setActiveTab('settings');
+        };
+        settingsButton.onClick(handleSettingsClick);
+        return () => {
+          settingsButton.offClick(handleSettingsClick);
+        };
+      } else {
+        settingsButton.hide();
+      }
+    }
   }, [activeTab]);
+
+  // Audio playback retry and fallback logic
+  const tryNextSource = (station: Station) => {
+    currentUrlIndexRef.current += 1;
+    playUrlIndex(station, currentUrlIndexRef.current);
+  };
+
+  const playUrlIndex = (station: Station, index: number) => {
+    if (playbackTimeoutRef.current) {
+      clearTimeout(playbackTimeoutRef.current);
+    }
+
+    if (index >= playbackUrlsRef.current.length) {
+      console.error('All stream sources failed to load');
+      setStatus('error');
+      
+      const firstUrl = playbackUrlsRef.current[0] || '';
+      if (firstUrl.startsWith('http://') && window.location.protocol === 'https:') {
+        setStatusText('Ошибка: Нужен HTTPS');
+      } else if (firstUrl.endsWith('.m3u') || firstUrl.endsWith('.m3u8') || firstUrl.endsWith('.pls')) {
+        setStatusText('Формат плейлиста (.m3u/.pls) не поддерживается');
+      } else {
+        setStatusText('Источник недоступен');
+      }
+      setIsPlaying(false);
+      return;
+    }
+
+    const targetUrl = playbackUrlsRef.current[index];
+    console.log(`Attempting to play URL ${index + 1}/${playbackUrlsRef.current.length}: ${targetUrl}`);
+    
+    setStatus('buffering');
+    setStatusText('Подключение...');
+
+    if (!audioRef.current) {
+      const audio = new Audio(targetUrl);
+      audioRef.current = audio;
+      setupAudioListeners(audio);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = targetUrl;
+      audioRef.current.load();
+    }
+
+    audioRef.current.volume = volume;
+
+    // Set a timeout of 7 seconds to try the next URL if loading hangs
+    playbackTimeoutRef.current = setTimeout(() => {
+      console.warn(`Playback timeout for ${targetUrl}, trying next source...`);
+      tryNextSource(station);
+    }, 7000);
+
+    audioRef.current.play()
+      .then(() => {
+        if (playbackTimeoutRef.current) {
+          clearTimeout(playbackTimeoutRef.current);
+        }
+        setIsPlaying(true);
+        setStatus('playing');
+        setStatusText('Играет');
+      })
+      .catch((err) => {
+        console.warn(`Immediate play failure for ${targetUrl}:`, err);
+        if (currentUrlIndexRef.current === index) {
+          if (playbackTimeoutRef.current) {
+            clearTimeout(playbackTimeoutRef.current);
+          }
+          tryNextSource(station);
+        }
+      });
+  };
 
   // 7. Initialize Audio Event listeners to manage stream buffers
   const setupAudioListeners = (audio: HTMLAudioElement) => {
     audio.addEventListener('playing', () => {
+      if (playbackTimeoutRef.current) {
+        clearTimeout(playbackTimeoutRef.current);
+      }
       setIsPlaying(true);
       setStatus('playing');
       setStatusText('Играет');
@@ -300,9 +432,17 @@ export default function App() {
     });
 
     audio.addEventListener('error', () => {
-      setIsPlaying(false);
-      setStatus('error');
-      setStatusText('Ошибка потока');
+      if (playbackTimeoutRef.current) {
+        clearTimeout(playbackTimeoutRef.current);
+      }
+      console.warn(`Audio error event fired for: ${audio.src}`);
+      if (selectedStationRef.current) {
+        tryNextSource(selectedStationRef.current);
+      } else {
+        setIsPlaying(false);
+        setStatus('error');
+        setStatusText('Ошибка потока');
+      }
     });
 
     audio.addEventListener('stalled', () => {
@@ -320,8 +460,8 @@ export default function App() {
       setLoaderText('Выбор зеркала сети...');
       const response = await fetch('https://all.api.radio-browser.info/json/servers');
       if (response.ok) {
-        const servers = await response.ok ? await response.json() : [];
-        if (servers.length > 0) {
+        const servers = await response.json();
+        if (servers && servers.length > 0) {
           const randomIndex = Math.floor(Math.random() * servers.length);
           chosenServer = `https://${servers[randomIndex].name}`;
         }
@@ -341,58 +481,84 @@ export default function App() {
     if (isLoading) return;
     setIsLoading(true);
 
-    const activeServer = customServer || apiServer;
+    const initialServer = customServer || apiServer;
     const offset = reset ? 0 : currentOffset;
 
-    try {
-      if (reset) {
-        setLoaderProgress(85);
-        setLoaderText('Синхронизация эфира...');
+    // Create a unique ordered list of candidate servers to try (starting with the active/custom one)
+    const candidates = [initialServer];
+    for (const srv of FALLBACK_SERVERS) {
+      if (srv !== initialServer) {
+        candidates.push(srv);
       }
+    }
 
-      const endpoint = query.trim()
-        ? `${activeServer}/json/stations/search?name=${encodeURIComponent(query)}&limit=${LIMIT}&offset=${offset}&order=votes&reverse=true`
-        : `${activeServer}/json/stations/search?limit=${LIMIT}&offset=${offset}&order=votes&reverse=true`;
+    let success = false;
+    let lastError: any = null;
 
-      const response = await fetch(endpoint);
-      if (!response.ok) throw new Error('API server failed');
+    if (reset) {
+      setLoaderProgress(85);
+      setLoaderText('Синхронизация эфира...');
+    }
 
-      const data = await response.json();
-      const valid: Station[] = data.filter((s: any) => s.url_resolved && s.name);
+    for (const server of candidates) {
+      try {
+        const endpoint = query.trim()
+          ? `${server}/json/stations/search?name=${encodeURIComponent(query)}&limit=${LIMIT}&offset=${offset}&order=votes&reverse=true`
+          : `${server}/json/stations/search?limit=${LIMIT}&offset=${offset}&order=votes&reverse=true`;
 
-      if (reset) {
-        setStations(valid);
-        setCurrentOffset(valid.length);
-        // Pre-select first radio source if cache parameters omit
-        if (valid.length > 0 && !selectedStation) {
-          setSelectedStation(valid[0]);
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error(`API server ${server} returned status ${response.status}`);
+
+        const data = await response.json();
+        const valid: Station[] = data.filter((s: any) => s.url_resolved && s.name);
+
+        if (reset) {
+          setStations(valid);
+          setCurrentOffset(valid.length);
+          // Pre-select first radio source if cache parameters omit
+          if (valid.length > 0 && !selectedStation) {
+            setSelectedStation(valid[0]);
+          }
+        } else {
+          setStations((prev) => [...prev, ...valid]);
+          setCurrentOffset((prev) => prev + valid.length);
         }
-      } else {
-        setStations((prev) => [...prev, ...valid]);
-        setCurrentOffset((prev) => prev + valid.length);
-      }
 
-      setHasMore(valid.length === LIMIT);
+        setHasMore(valid.length === LIMIT);
 
-      // Gracefully fade loader out
-      if (reset) {
-        setLoaderProgress(100);
-        setLoaderText('Готово!');
-        setTimeout(() => {
-          setIsLoaderVisible(false);
-        }, 400);
+        // If we switched to a different server due to failure, update our active apiServer state
+        if (server !== apiServer) {
+          setApiServer(server);
+        }
+
+        // Gracefully fade loader out
+        if (reset) {
+          setLoaderProgress(100);
+          setLoaderText('Готово!');
+          setTimeout(() => {
+            setIsLoaderVisible(false);
+          }, 400);
+        }
+
+        success = true;
+        break; // break out of candidates loop since we succeeded
+      } catch (err) {
+        console.warn(`Failed to fetch stations from ${server}, trying next...`, err);
+        lastError = err;
       }
-    } catch (err) {
-      console.error('Error requesting stations list', err);
+    }
+
+    if (!success) {
+      console.error('All radio API servers failed', lastError);
       setStatus('error');
       setStatusText('Ошибка сети');
 
       if (reset) {
         setIsLoaderVisible(false);
       }
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   // 8. Dynamic pagination listener hooked to stream containers
@@ -424,24 +590,29 @@ export default function App() {
       console.warn('LocalStorage save skipped', e);
     }
 
-    if (!audioRef.current) {
-      const audio = new Audio(station.url_resolved);
-      audioRef.current = audio;
-      setupAudioListeners(audio);
-    } else {
-      audioRef.current.pause();
-      audioRef.current.src = station.url_resolved;
-      audioRef.current.load();
+    const urlsToTry: string[] = [];
+    
+    // 1. Try HTTPS version of url_resolved directly
+    if (station.url_resolved) {
+      const secureResolved = station.url_resolved.replace(/^http:\/\//i, 'https://');
+      urlsToTry.push(secureResolved);
+      urlsToTry.push(station.url_resolved);
+    }
+    
+    // 2. Try HTTPS version of original url directly
+    if (station.url) {
+      const secureUrl = station.url.replace(/^http:\/\//i, 'https://');
+      urlsToTry.push(secureUrl);
+      urlsToTry.push(station.url);
     }
 
-    // Set precise sound boundaries
-    audioRef.current.volume = volume;
-
-    audioRef.current.play().catch((err) => {
-      console.error('Audio play failed', err);
-      setStatus('error');
-      setStatusText('Ошибка воспроизведения');
-    });
+    // Remove duplicates while keeping order
+    const uniqueUrls = Array.from(new Set(urlsToTry)).filter(Boolean);
+    
+    playbackUrlsRef.current = uniqueUrls;
+    currentUrlIndexRef.current = 0;
+    
+    playUrlIndex(station, 0);
   };
 
   const handlePlayToggle = () => {
@@ -451,23 +622,22 @@ export default function App() {
     }
 
     if (!audioRef.current) {
-      // Lazy construct player interface
-      const audio = new Audio(selectedStation.url_resolved);
-      audioRef.current = audio;
-      setupAudioListeners(audio);
-      audioRef.current.volume = volume;
-      audioRef.current.play().catch(() => {
-        setStatus('error');
-        setStatusText('Ошибка воспроизведения');
-      });
+      playStation(selectedStation);
     } else {
       if (isPlaying) {
+        if (playbackTimeoutRef.current) {
+          clearTimeout(playbackTimeoutRef.current);
+        }
         audioRef.current.pause();
       } else {
-        audioRef.current.play().catch(() => {
-          setStatus('error');
-          setStatusText('Ошибка воспроизведения');
-        });
+        if (status === 'error' || !audioRef.current.src) {
+          playStation(selectedStation);
+        } else {
+          audioRef.current.play().catch((err) => {
+            console.warn('Play failed, restarting playback flow:', err);
+            playStation(selectedStation);
+          });
+        }
       }
     }
   };
@@ -525,8 +695,8 @@ export default function App() {
               : 'bg-[#1e1e1e] border-b border-white/[0.05]'
           }`}
         >
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-1 mb-1 tracking-[-0.5px] select-none">
-            WebRadioBot
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-0.5 mb-1 tracking-[-0.5px] select-none">
+            {activeTab === 'favorites' ? t.navFavorites : activeTab === 'settings' ? t.navSettings : 'WebRadioBot'}
           </h1>
 
           {/* Search bar module mimicking .search-wrapper exactly on Radio page */}
@@ -544,11 +714,21 @@ export default function App() {
                 placeholder={t.searchPlaceholder}
                 autoComplete="off"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(sanitizeInput(e.target.value))}
                 className={`w-full bg-transparent border-none outline-none text-[16px] py-3 px-0 font-medium placeholder-[#9e9e9e] focus:outline-none ${
                   resolvedTheme === 'light' ? 'text-[#1c1c1e]' : 'text-white'
                 }`}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="p-1.5 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] rounded-full transition-colors shrink-0 mr-1 text-[#9e9e9e] hover:text-[#e91e63]"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
               {isLoading && (
                 <Loader2 className="w-4 h-4 text-[#c2185b] animate-spin shrink-0 mr-1" />
               )}
@@ -610,11 +790,6 @@ export default function App() {
 
           {activeTab === 'favorites' && (
             <div className="mb-4">
-              <div className="flex items-center gap-2 mb-3 px-1.5 text-xs uppercase tracking-wider font-extrabold text-neutral-400 select-none">
-                <Heart className="w-4.5 h-4.5 text-[#c2185b] fill-[#c2185b]" />
-                <span>{t.favoritesLabel}</span>
-              </div>
-
               {favorites.length === 0 ? (
                 <div className="text-center py-12 text-[#9e9e9e] select-none">
                   <Heart className="w-12 h-12 text-neutral-600 mx-auto mb-2.5" />

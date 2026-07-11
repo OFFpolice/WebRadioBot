@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Radio, ExternalLink, Palette, Globe } from 'lucide-react';
+import { ChevronRight, Radio, ExternalLink, Palette, Globe, User } from 'lucide-react';
 import translations from '../lang.json';
 
 interface SettingsTabProps {
@@ -40,9 +40,98 @@ export default function SettingsTab({
       : 'text-neutral-400 hover:text-neutral-200';
   };
 
+  const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : undefined;
+
+  const getAvatarContent = () => {
+    if (tgUser?.photo_url) {
+      return (
+        <img 
+          src={tgUser.photo_url} 
+          alt="Avatar" 
+          referrerPolicy="no-referrer"
+          className="w-14 h-14 rounded-full object-cover border-2 border-[#c2185b] shadow-md shrink-0"
+        />
+      );
+    }
+    
+    const initials = tgUser?.first_name 
+      ? (tgUser.first_name[0] + (tgUser.last_name ? tgUser.last_name[0] : '')).toUpperCase()
+      : 'G';
+
+    return (
+      <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#c2185b] to-[#f06292] flex items-center justify-center text-white text-base font-bold border-2 border-transparent shadow-md shrink-0 select-none">
+        {initials}
+      </div>
+    );
+  };
+
+  const displayName = tgUser 
+    ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || 'Telegram User'
+    : t.userGuest;
+
+  const displayUsername = tgUser?.username 
+    ? `@${tgUser.username}` 
+    : '@guest';
+
   return (
     <div className="py-2 px-1 select-none max-w-[440px] mx-auto flex flex-col gap-5">
       
+      {/* User Profile block */}
+      <div className={`p-4 rounded-2xl ${cardBg} border ${cardBorder} flex flex-col gap-3.5 shadow-sm`}>
+        <div className="flex items-center gap-2 pb-1.5 border-b border-black/[0.04] dark:border-white/[0.04]">
+          <User className="w-5 h-5 text-[#c2185b]" />
+          <span className={`text-[15px] font-bold ${labelColor}`}>
+            {t.userProfileLabel}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {getAvatarContent()}
+          <div className="flex flex-col min-w-0">
+            <span className={`text-base font-bold truncate leading-snug ${labelColor}`}>
+              {displayName}
+            </span>
+            <span className="text-[13px] text-[#f06292] font-semibold truncate">
+              {displayUsername}
+            </span>
+            {tgUser?.id && (
+              <span className={`text-[11px] font-medium mt-0.5 ${subtextColor}`}>
+                ID: {tgUser.id}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Detailed User metadata info lines */}
+        <div className={`p-3 rounded-xl ${segmentBg} grid grid-cols-2 gap-y-2 gap-x-4 text-xs`}>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60 mb-0.5">
+              {t.userFirstName}
+            </span>
+            <span className={`font-bold truncate ${labelColor}`}>
+              {tgUser?.first_name || displayName}
+            </span>
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60 mb-0.5">
+              {t.userLastName}
+            </span>
+            <span className={`font-bold truncate ${labelColor}`}>
+              {tgUser?.last_name || '—'}
+            </span>
+          </div>
+          <div className="col-span-2 h-[1px] bg-black/[0.04] dark:bg-white/[0.04] my-0.5" />
+          <div className="col-span-2 flex flex-col min-w-0">
+            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60 mb-0.5">
+              {t.userUsername}
+            </span>
+            <span className={`font-mono truncate ${labelColor}`}>
+              {displayUsername}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Theme selection block */}
       <div className={`p-4 rounded-2xl ${cardBg} border ${cardBorder} flex flex-col gap-3.5 shadow-sm`}>
         <div className="flex items-center gap-2">

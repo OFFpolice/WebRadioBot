@@ -1,5 +1,6 @@
 export interface Station {
   url_resolved: string;
+  url?: string;
   name: string;
   tags?: string;
   favicon?: string;
@@ -21,10 +22,21 @@ export interface TelegramWebApp {
   colorScheme?: 'dark' | 'light';
   initDataUnsafe?: {
     user?: {
+      id?: number;
+      first_name?: string;
+      last_name?: string;
+      username?: string;
+      photo_url?: string;
       language_code?: string;
     };
   };
   BackButton?: {
+    show: () => void;
+    hide: () => void;
+    onClick: (cb: () => void) => void;
+    offClick: (cb: () => void) => void;
+  };
+  SettingsButton?: {
     show: () => void;
     hide: () => void;
     onClick: (cb: () => void) => void;
