@@ -184,10 +184,11 @@ export default function App() {
     if (tg) {
       try {
         if (resolvedTheme === 'light') {
-          // "Нужно чтобы при белой теме была строка с временем была черная в Safe-Area"
-          // We set header color to #000000 (black) so the status bar has a black background with white text.
+          // "Нужно не все строка черного цвета а только данные в этой строке должны быть чёрного цвета"
+          // We set the header color to #ffffff (white).
+          // Telegram WebApp automatically renders its status bar contents (clock, battery, icons) in black when the header is white/light.
           if (typeof tg.setHeaderColor === 'function') {
-            tg.setHeaderColor('#000000');
+            tg.setHeaderColor('#ffffff');
           }
           if (typeof tg.setBackgroundColor === 'function') {
             tg.setBackgroundColor('#f7f8fa');
@@ -725,7 +726,7 @@ export default function App() {
         <div 
           className={`w-full shrink-0 transition-colors duration-200 ${
             resolvedTheme === 'light' 
-              ? 'bg-black' 
+              ? 'bg-white' 
               : 'bg-[#1e1e1e]'
           }`}
           style={{ height: 'var(--tg-safe-area-inset-top, 0px)' }}
