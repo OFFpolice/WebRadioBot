@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Heart, Radio, Settings, ArrowUp, Loader2, X } from 'lucide-react';
 import { Station, TabType } from './types';
 import Loader from './components/Loader';
@@ -102,11 +102,16 @@ export default function App() {
     return 'system';
   });
 
-  const [lang, setLang] = useState<'ru' | 'en' | 'uk'>(() => {
+  const [lang, setLang] = useState<'system' | 'ru' | 'en' | 'uk'>(() => {
     const saved = localStorage.getItem('webradio_lang');
-    if (saved === 'ru' || saved === 'en' || saved === 'uk') {
-      return saved as 'ru' | 'en' | 'uk';
+    if (saved === 'system' || saved === 'ru' || saved === 'en' || saved === 'uk') {
+      return saved as 'system' | 'ru' | 'en' | 'uk';
     }
+    return 'system';
+  });
+
+  const resolvedLang = useMemo(() => {
+    if (lang !== 'system') return lang;
 
     // "язык нужно определить автоматически ... английский язык должен быть по умолчанию если не удалось определить язык"
     // 1. Try Telegram WebApp user language_code
@@ -129,7 +134,7 @@ export default function App() {
 
     // 3. Default fallback is English
     return 'en';
-  });
+  }, [lang]);
 
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>(() => {
     try {
@@ -175,16 +180,16 @@ export default function App() {
 
   // Dynamically update loader text when language changes or loads
   useEffect(() => {
-    if (lang === 'uk') {
+    if (resolvedLang === 'uk') {
       setLoaderText('Ініціалізація...');
-    } else if (lang === 'en') {
+    } else if (resolvedLang === 'en') {
       setLoaderText('Initializing...');
     } else {
       setLoaderText('Инициализация...');
     }
-  }, [lang]);
+  }, [resolvedLang]);
 
-  const handleLangChange = (newLang: 'ru' | 'en' | 'uk') => {
+  const handleLangChange = (newLang: 'system' | 'ru' | 'en' | 'uk') => {
     setLang(newLang);
     localStorage.setItem('webradio_lang', newLang);
   };
@@ -672,7 +677,7 @@ export default function App() {
     return favorites.some((f) => f.url_resolved === station.url_resolved);
   };
 
-  const t = translations[lang] || translations['en'];
+  const t = translations[resolvedLang] || translations['en'];
 
   return (
     <div className="flex justify-center w-full min-h-screen bg-[#0e0e0e] text-white font-sans antialiased">
@@ -825,6 +830,7 @@ export default function App() {
             <SettingsTab
               theme={theme}
               lang={lang}
+              resolvedLang={resolvedLang}
               onThemeChange={setTheme}
               onLangChange={handleLangChange}
               resolvedTheme={resolvedTheme}
@@ -837,11 +843,11 @@ export default function App() {
           activeStation={selectedStation}
           isPlaying={isPlaying}
           status={status}
-          statusText={getLocalizedStatusText(status, lang)}
+          statusText={getLocalizedStatusText(status, resolvedLang)}
           volume={volume}
           onPlayToggle={handlePlayToggle}
           onVolumeChange={setVolume}
-          lang={lang}
+          lang={resolvedLang}
           resolvedTheme={resolvedTheme}
           theme={theme}
         />

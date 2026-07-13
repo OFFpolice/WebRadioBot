@@ -1,26 +1,29 @@
-import React from 'react';
-import { ChevronRight, Radio, ExternalLink, Palette, Globe, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronRight, Radio, ExternalLink, Palette, Globe, User, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import translations from '../lang.json';
 
 interface SettingsTabProps {
   theme: 'white' | 'black' | 'system';
-  lang: 'ru' | 'en' | 'uk';
+  lang: 'system' | 'ru' | 'en' | 'uk';
+  resolvedLang: 'ru' | 'en' | 'uk';
   onThemeChange: (newTheme: 'white' | 'black' | 'system') => void;
-  onLangChange: (newLang: 'ru' | 'en' | 'uk') => void;
+  onLangChange: (newLang: 'system' | 'ru' | 'en' | 'uk') => void;
   resolvedTheme: 'dark' | 'light';
 }
 
 export default function SettingsTab({
   theme,
   lang,
+  resolvedLang,
   onThemeChange,
   onLangChange,
   resolvedTheme,
 }: SettingsTabProps) {
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const isLight = resolvedTheme === 'light';
   
   // Safe fallback to English translations if the language is unknown
-  const t = translations[lang] || translations['en'];
+  const t = translations[resolvedLang] || translations['en'];
 
   // Theme-sensitive colors
   const cardBg = isLight ? 'bg-white' : 'bg-[#1e1e1e]';
@@ -165,35 +168,64 @@ export default function SettingsTab({
       </div>
 
       {/* 2. Language selection block */}
-      <div className={`p-4 rounded-2xl ${cardBg} border ${cardBorder} flex flex-col gap-3.5 shadow-sm`}>
-        <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-[#c2185b]" />
-          <span className={`text-[15px] font-bold ${labelColor}`}>
-            {t.langLabel}
-          </span>
-        </div>
-        
-        {/* Segmented Control - 3 columns for Russian, English, Ukrainian */}
-        <div className={`grid grid-cols-3 gap-1 p-1 rounded-xl ${segmentBg}`}>
-          <button
-            onClick={() => onLangChange('ru')}
-            className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'ru')}`}
-          >
-            {t.langRu}
-          </button>
-          <button
-            onClick={() => onLangChange('en')}
-            className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'en')}`}
-          >
-            {t.langEn}
-          </button>
-          <button
-            onClick={() => onLangChange('uk')}
-            className={`text-[12.5px] py-2 rounded-lg text-center font-medium transition-all active:scale-95 cursor-pointer ${getSegmentBtnClass(lang === 'uk')}`}
-          >
-            {t.langUk}
-          </button>
-        </div>
+      <div className={`p-4 rounded-2xl ${cardBg} border ${cardBorder} flex flex-col gap-2 shadow-sm`}>
+        <button
+          onClick={() => setIsLangOpen(!isLangOpen)}
+          className="flex items-center justify-between w-full text-left transition-all active:scale-[0.99] cursor-pointer focus:outline-none"
+        >
+          <div className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-[#c2185b]" />
+            <span className={`text-[15px] font-bold ${labelColor}`}>
+              {t.langLabel}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-sm font-semibold ${subtextColor}`}>
+              {lang === 'system' ? t.langSystem : lang === 'ru' ? t.langRu : lang === 'uk' ? t.langUk : t.langEn}
+            </span>
+            {isLangOpen ? (
+              <ChevronUp className={`w-4 h-4 transition-transform duration-200 ${subtextColor}`} />
+            ) : (
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${subtextColor}`} />
+            )}
+          </div>
+        </button>
+
+        {isLangOpen && (
+          <div className={`flex flex-col gap-1 p-1 rounded-xl ${segmentBg} mt-1 overflow-hidden animate-fade-in`}>
+            {([
+              { code: 'system', label: t.langSystem },
+              { code: 'ru', label: t.langRu },
+              { code: 'uk', label: t.langUk },
+              { code: 'en', label: t.langEn },
+            ] as const).map(({ code, label }) => {
+              const active = lang === code;
+              return (
+                <button
+                  key={code}
+                  onClick={() => {
+                    onLangChange(code);
+                    setIsLangOpen(false);
+                  }}
+                  className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all active:scale-[0.98] cursor-pointer ${
+                    active 
+                      ? isLight 
+                        ? 'bg-white text-[#c2185b] font-bold shadow-sm' 
+                        : 'bg-[#121212] text-[#f06292] font-bold shadow-[0_2px_4px_rgba(0,0,0,0.2)]'
+                      : isLight
+                        ? 'text-neutral-600 hover:bg-white/40'
+                        : 'text-neutral-300 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <span>{label}</span>
+                  {active && (
+                    <Check className="w-4 h-4 shrink-0 text-[#c2185b] dark:text-[#f06292]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
 

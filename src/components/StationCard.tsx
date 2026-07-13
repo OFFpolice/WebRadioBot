@@ -59,7 +59,7 @@ export default function StationCard({
   return (
     <div
       onClick={onPlay}
-      className={`group flex items-start p-[10px_12px_10px_10px] ${containerBg} rounded-2xl mb-2 border ${containerBorder} transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${containerStyle}`}
+      className={`group flex items-center p-[10px_12px_10px_10px] ${containerBg} rounded-2xl mb-2 border ${containerBorder} transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${containerStyle}`}
     >
       {/* Cover Image Wrapper */}
       <div className={`relative w-[52px] h-[52px] rounded-xl ${coverBg} flex items-center justify-center mr-3 shrink-0 overflow-hidden`}>
