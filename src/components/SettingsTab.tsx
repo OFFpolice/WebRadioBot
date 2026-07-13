@@ -241,7 +241,7 @@ export default function SettingsTab({
         </div>
 
         <h3 className={`text-[18px] font-bold mb-2 ${labelColor}`}>
-          WebRadioBot
+          𝗪𝗲𝗯𝗥𝗮𝗱𝗶𝗼𝗕𝗼𝘁
         </h3>
         
         <p className={`mb-6 text-[14px] leading-relaxed max-w-[320px] mx-auto ${subtextColor}`}>

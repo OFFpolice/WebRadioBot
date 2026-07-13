@@ -34,10 +34,10 @@ export default function Loader({ progress, text, isVisible, resolvedTheme = 'dar
 
       {/* Headings */}
       <h2 
-        className="text-[26px] font-extrabold tracking-[-0.5px] mb-2 bg-clip-text text-transparent"
+        className="text-[26px] font-extrabold px-4 pb-1 mb-2 bg-clip-text text-transparent"
         style={{ background: 'linear-gradient(135deg, #c2185b, #e91e63, #f06292)', WebkitBackgroundClip: 'text' }}
       >
-        WebRadioBot
+        𝗪𝗲𝗯𝗥𝗮𝗱𝗶𝗼𝗕𝗼𝘁
       </h2>
       <p className={`text-[13px] font-medium mb-[40px] tracking-[0.3px] ${isLight ? 'text-neutral-500' : 'text-[#666666]'}`}>
         Тысячи станций со всего мира

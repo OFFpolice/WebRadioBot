@@ -740,8 +740,10 @@ export default function App() {
               : 'bg-[#1e1e1e] border-b border-white/[0.05]'
           }`}
         >
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-0.5 mb-1 tracking-[-0.5px] select-none">
-            {activeTab === 'favorites' ? t.navFavorites : activeTab === 'settings' ? t.navSettings : 'WebRadioBot'}
+          <h1 className={`text-2xl bg-gradient-to-r from-[#c2185b] to-[#e91e63] bg-clip-text text-transparent inline-block pt-0.5 pb-1 px-4 mb-1 select-none ${
+            activeTab === 'favorites' || activeTab === 'settings' ? 'font-black' : 'font-bold'
+          }`}>
+            {activeTab === 'favorites' ? t.navFavorites : activeTab === 'settings' ? t.navSettings : '𝗪𝗲𝗯𝗥𝗮𝗱𝗶𝗼𝗕𝗼𝘁'}
           </h1>
 
           {/* Search bar module mimicking .search-wrapper exactly on Radio page */}
