@@ -178,6 +178,35 @@ export default function App() {
     }
   }, [theme]);
 
+  // Sync Telegram WebApp header and background colors with the active theme
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      try {
+        if (resolvedTheme === 'light') {
+          // "Нужно чтобы при белой теме была строка с временем была черная в Safe-Area"
+          // We set header color to #000000 (black) so the status bar has a black background with white text.
+          if (typeof tg.setHeaderColor === 'function') {
+            tg.setHeaderColor('#000000');
+          }
+          if (typeof tg.setBackgroundColor === 'function') {
+            tg.setBackgroundColor('#f7f8fa');
+          }
+        } else {
+          // For dark theme, keep it dark grey matching the header background #1e1e1e
+          if (typeof tg.setHeaderColor === 'function') {
+            tg.setHeaderColor('#1e1e1e');
+          }
+          if (typeof tg.setBackgroundColor === 'function') {
+            tg.setBackgroundColor('#121212');
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to sync Telegram theme parameters', e);
+      }
+    }
+  }, [resolvedTheme]);
+
   // Dynamically update loader text when language changes or loads
   useEffect(() => {
     if (resolvedLang === 'uk') {
@@ -692,9 +721,19 @@ export default function App() {
       <div 
         className={`w-full max-w-[500px] h-screen flex flex-col relative overflow-hidden shadow-2xl transition-colors duration-200 ${resolvedTheme === 'light' ? 'bg-[#f7f8fa] text-[#1c1c1e]' : 'bg-[#121212] text-white'}`}
       >
+        {/* Telegram Safe Area Status Bar Spacer */}
+        <div 
+          className={`w-full shrink-0 transition-colors duration-200 ${
+            resolvedTheme === 'light' 
+              ? 'bg-black' 
+              : 'bg-[#1e1e1e]'
+          }`}
+          style={{ height: 'var(--tg-safe-area-inset-top, 0px)' }}
+        />
+
         {/* App Title Header exactly like .app-header */}
         <header 
-          className={`safe-pt safe-pl safe-pr pb-2 text-center shrink-0 transition-colors duration-200 ${
+          className={`pt-2 safe-pl safe-pr pb-2 text-center shrink-0 transition-colors duration-200 ${
             resolvedTheme === 'light' 
               ? 'bg-white border-b border-black/[0.05]' 
               : 'bg-[#1e1e1e] border-b border-white/[0.05]'
