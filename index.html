@@ -4,10 +4,61 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>WebRadioBot</title>
+    <meta name="description" content="Онлайн радио для Telegram Mini App с поддержкой тем, языков и избранного" />
+    <meta property="og:title" content="WebRadioBot" />
+    <meta property="og:description" content="Онлайн радио для Telegram Mini App с поддержкой тем, языков и избранного" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      (function() {
+        function patchTelegram() {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (!tg) return;
+
+          var origRequest = tg.requestFullscreen;
+          var origExit = tg.exitFullscreen;
+
+          // Guard exitFullscreen against version mismatch (< 8.0)
+          tg.exitFullscreen = function() {
+            try {
+              if (typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('8.0')) {
+                if (typeof origExit === 'function') {
+                  origExit.call(tg);
+                }
+              }
+            } catch (err) {
+              console.warn('exitFullscreen avoided error:', err);
+            }
+          };
+
+          // Guard requestFullscreen: never open fullscreen on PC / desktop, and verify version >= 8.0
+          tg.requestFullscreen = function() {
+            try {
+              var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var isDesktopPlatform = tg.platform === 'tdesktop' || tg.platform === 'macos' || tg.platform === 'web' || tg.platform === 'weba' || tg.platform === 'webk';
+              if (isDesktopPlatform || !isMobile) {
+                // Do not request fullscreen on PC
+                return;
+              }
+              if (typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('8.0')) {
+                if (typeof origRequest === 'function') {
+                  origRequest.call(tg);
+                }
+              }
+            } catch (err) {
+              console.warn('requestFullscreen avoided error:', err);
+            }
+          };
+        }
+
+        patchTelegram();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', patchTelegram);
+        }
+      })();
+    </script>
     <script type="module" crossorigin src="./assets/index-D37iO61R.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-B1x6YE94.css">
   </head>
@@ -15,4 +66,3 @@
     <div id="root"></div>
   </body>
 </html>
-

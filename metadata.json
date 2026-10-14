@@ -1,0 +1,7 @@
+{
+  "name": "WebRadioBot",
+  "description": "Онлайн радио для Telegram Mini App с поддержкой тем, языков и избранного",
+  "version": "0.0.8",
+  "requestFrame": false,
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
